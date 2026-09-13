@@ -2,6 +2,7 @@ import Foundation
 
 final class MusicAPIService {
     static let shared = MusicAPIService()
+    private(set) var lastErrorMessage: String?
     private let session: URLSession
 
     init(session: URLSession = .shared) {
@@ -17,6 +18,15 @@ final class MusicAPIService {
         let (spotifyResults, soundCloudResults) = await (spotify, soundCloud)
 
         let allTracks = (spotifyResults ?? []) + (soundCloudResults ?? [])
+        if allTracks.isEmpty {
+            if !APIConfig.isSpotifySearchConfigured && !APIConfig.isSoundCloudSearchConfigured {
+                lastErrorMessage = "Keine Suchanbieter konfiguriert. Hinterlege SpotifyWebAPIAccessToken und/oder SoundCloudOAuthToken."
+            } else {
+                lastErrorMessage = "Keine Treffer oder die Provider-Anfrage wurde abgewiesen. Prüfe die API-Zugangsdaten."
+            }
+        } else {
+            lastErrorMessage = nil
+        }
         return SearchResults(tracks: allTracks, artists: [], albums: [], playlists: [])
     }
 
@@ -35,7 +45,11 @@ final class MusicAPIService {
 
         do {
             let (data, response) = try await session.data(for: request)
-            guard let http = response as? HTTPURLResponse, 200..<300 ~= http.statusCode else { return nil }
+            guard let http = response as? HTTPURLResponse else { return nil }
+            guard 200..<300 ~= http.statusCode else {
+                if http.statusCode == 401 || http.statusCode == 403 { lastErrorMessage = "Spotify-Zugangsdaten ungültig oder abgelaufen." }
+                return nil
+            }
             let root = try JSONDecoder().decode(SpotifySearchResponse.self, from: data)
             return root.tracks.items.map {
                 Track(
@@ -85,7 +99,11 @@ final class MusicAPIService {
 
         do {
             let (data, response) = try await session.data(for: request)
-            guard let http = response as? HTTPURLResponse, 200..<300 ~= http.statusCode else { return nil }
+            guard let http = response as? HTTPURLResponse else { return nil }
+            guard 200..<300 ~= http.statusCode else {
+                if http.statusCode == 401 || http.statusCode == 403 { lastErrorMessage = "SoundCloud-Zugangsdaten ungültig oder abgelaufen." }
+                return nil
+            }
             let root = try JSONDecoder().decode([SoundCloudTrackDTO].self, from: data)
             return root.compactMap { item in
                 guard item.access == "playable" else { return nil }
