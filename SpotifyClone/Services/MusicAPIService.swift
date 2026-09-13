@@ -45,7 +45,7 @@ final class MusicAPIService {
                     albumName: $0.album.name,
                     artworkURL: URL(string: $0.album.images.first?.url ?? ""),
                     streamURL: nil,
-                    sourceURL: URL(string: $0.external_urls.spotify),
+                    sourceURL: URL(string: $0.external_urls["spotify"] ?? ""),
                     duration: TimeInterval($0.duration_ms) / 1000,
                     source: .spotify
                 )

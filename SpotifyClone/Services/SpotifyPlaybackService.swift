@@ -50,7 +50,7 @@ final class SpotifyPlaybackService: NSObject {
 }
 
 #if canImport(SpotifyiOS)
-extension SpotifyPlaybackService: SPTAppRemoteDelegate {
+@preconcurrency extension SpotifyPlaybackService: SPTAppRemoteDelegate {
     func appRemoteDidEstablishConnection(_ appRemote: SPTAppRemote) {}
     func appRemote(_ appRemote: SPTAppRemote, didDisconnectWithError error: Error?) {}
     func appRemote(_ appRemote: SPTAppRemote, didFailConnectionAttemptWithError error: Error?) {}
